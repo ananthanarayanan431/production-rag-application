@@ -34,6 +34,7 @@ class CustomerSupportBotSettings(BaseSettings):
     GPTCACHE_URL: ServiceUrl
     RIVAL_URL: ServiceUrl
     MONGODB_URI: SecretStr
+    POSTGRES_DSN: SecretStr
 
     # Generation
     LOW_COMPLEXITY_MODEL: str = "gemini-2.0-flash"
