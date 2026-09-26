@@ -4,8 +4,6 @@ A production-ready AI support bot for Apple devices and services.
 
 Built with FastAPI + LangGraph + PageIndex + Ragas + Rival AI.
 
-Companion article: *[I built a production-ready AI support bot. Here's every decision I made.]()*
-
 ---
 
 ## Architecture
