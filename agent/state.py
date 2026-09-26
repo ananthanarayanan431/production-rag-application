@@ -1,6 +1,5 @@
-from typing import TypedDict
-from typing import Literal
-from typing import Annotated
+from typing import Annotated, Literal, TypedDict
+
 
 def append_list(existing: list, new: list) -> list:
     """

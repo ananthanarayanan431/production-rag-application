@@ -38,7 +38,8 @@ services:
     ports:
       - "8002:8002"
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8002/health"]
+      # python:3.11-slim has no curl; use the interpreter that's already in the image
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8002/health', timeout=3)"]
       interval: 15s
       timeout: 5s
       retries: 5

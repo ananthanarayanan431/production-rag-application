@@ -1,12 +1,8 @@
 import logging
 
 import httpx
-from tenacity import before_sleep_log
-from tenacity import retry
-from tenacity import stop_after_attempt
-from tenacity import wait_exponential
-from tenacity import retry_if_exception_type
 import structlog
+from tenacity import before_sleep_log, retry, retry_if_exception_type, stop_after_attempt, wait_exponential
 
 logger = structlog.get_logger()
 logger = logger.bind(service="resilience")

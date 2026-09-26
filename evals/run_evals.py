@@ -46,7 +46,7 @@ async def run_single_eval(client: httpx.AsyncClient, case: dict) -> dict:
             f"{eval_settings.APP_URL}/query",
             json={"query": case["query"], "session_id": f"eval-{case['id']}"},
             headers=headers,
-            timeout=eval_settings.EVAL_TIMEOUT_MS / 1000,
+            timeout=eval_settings.TIMEOUT_MS / 1000,
         )
         latency_ms = (time.perf_counter() - start) * 1000
 

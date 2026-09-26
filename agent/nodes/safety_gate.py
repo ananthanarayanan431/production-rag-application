@@ -4,9 +4,9 @@ LangGraph fans them out in parallel natively from the entry point.
 No asyncio.gather needed — and both appear as separate spans in LangSmith.
 """
 import asyncio
+
 import httpx
 import pybreaker
-
 from presidio_analyzer import AnalyzerEngine
 from presidio_anonymizer import AnonymizerEngine
 

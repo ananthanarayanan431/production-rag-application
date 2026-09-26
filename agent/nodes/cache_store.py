@@ -12,6 +12,18 @@ settings = get_settings()
 async def cache_store_node(state: SupportBotState) -> dict:
     log = get_logger(state["request_id"], node="cache_store")
 
+    # A cached answer is later served as validation_passed=True with perfect scores,
+    # so only cache answers that actually passed validation.
+    if not state.get("validation_passed"):
+        log.info("cache_store_skipped", reason="validation_failed")
+    else:
+        await _store(state, log)
+
+    _log_summary(state, log)
+    return {}
+
+
+async def _store(state: SupportBotState, log) -> None:
     try:
         with gptcache_breaker.calling():
             async with httpx.AsyncClient() as client:
@@ -31,7 +43,9 @@ async def cache_store_node(state: SupportBotState) -> dict:
         # won't hit the cache — the user gets their response regardless.
         log.warning("cache_store_failed", error=str(exc))
 
-    # Log the full summary for this request
+
+def _log_summary(state: SupportBotState, log) -> None:
+    """Log the full summary for this request."""
     log.info(
         "request_complete",
         model_used=state.get("model_used"),
@@ -43,5 +57,3 @@ async def cache_store_node(state: SupportBotState) -> dict:
         num_sub_queries=len(state.get("sub_queries", [])),
         needs_decomp=state.get("needs_decomp"),
     )
-
-    return {}

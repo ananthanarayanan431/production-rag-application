@@ -1,7 +1,8 @@
 from pathlib import Path
 from typing import Literal
-from pydantic import BaseModel
+
 from langchain_google_genai import ChatGoogleGenerativeAI
+from pydantic import BaseModel
 
 from agent.state import SupportBotState
 from observability.logging import get_logger

@@ -8,7 +8,8 @@ class EvalSettings(BaseSettings):
     # Must match the target app's JWT_SECRET / JWT_ALGORITHM
     JWT_SECRET: str = ""
     JWT_ALGORITHM: str = "HS256"
-    EVAL_TIMEOUT_MS: int = 30000
+    # env_prefix="EVAL_" makes this EVAL_TIMEOUT_MS
+    TIMEOUT_MS: int = 30000
     FAITHFULNESS_THRESHOLD: float = 0.7
     COMPLETENESS_THRESHOLD: float = 0.7
     LATENCY_REGRESSION_THRESHOLD: float = 0.2  # 20% regression allowed

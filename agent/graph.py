@@ -1,15 +1,8 @@
-from langgraph.graph import StateGraph, END
 from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
+from langgraph.graph import END, StateGraph
 from psycopg_pool import AsyncConnectionPool
 
-from agent.state import SupportBotState
-from agent.nodes.safety_gate import (
-    pii_scrub_node,
-    attack_detect_node,
-    safety_merge_node,
-)
-from agent.nodes.query_intelligence import query_intelligence_node
-from agent.nodes.session_memory import session_memory_node
+from agent.nodes.cache_store import cache_store_node
 from agent.nodes.context_retrieval import context_retrieval_node
 from agent.nodes.execution import (
     generate_flash_node,
@@ -19,11 +12,18 @@ from agent.nodes.execution import (
     route_execution,
 )
 from agent.nodes.output_validation import (
-    faithfulness_node,
     completeness_node,
+    faithfulness_node,
     validation_merge_node,
 )
-from agent.nodes.cache_store import cache_store_node
+from agent.nodes.query_intelligence import query_intelligence_node
+from agent.nodes.safety_gate import (
+    attack_detect_node,
+    pii_scrub_node,
+    safety_merge_node,
+)
+from agent.nodes.session_memory import session_memory_node
+from agent.state import SupportBotState
 
 
 def _route_after_safety(state: SupportBotState) -> str:
