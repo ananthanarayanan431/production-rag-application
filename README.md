@@ -56,17 +56,16 @@ POST /query
 **1. Clone and configure**
 
 ```bash
-git clone https://github.com/your-handle/apple-support-bot
-cd apple-support-bot
+uv sync
 cp .env.example .env
-# Fill in your API keys in .env
+# Fill in your API keys, JWT_SECRET / JWT_REFRESH_TOKEN_SECRET (32+ chars each) and POSTGRES_DSN in .env
 ```
 
 **2. Index your Apple support documents**
 
 ```bash
 # Run once before starting the app
-python -m prep.index_docs --pdf path/to/apple-support-guide.pdf --doc-id apple-support
+uv run python -m prep.index_docs --pdf path/to/apple-support-guide.pdf --doc-id apple-support
 ```
 
 **3. Start all services**
@@ -94,14 +93,15 @@ curl -X POST http://localhost:8000/query \
 ## Project structure
 
 ```
-apple-support-bot/
+production-rag/
 ├── main.py                        # FastAPI app, /query endpoint
-├── config.py                      # Settings via pydantic-settings
-├── graph/
+├── config/
+│   └── setting.py                 # Settings via pydantic-settings (get_settings())
+├── agent/
 │   ├── state.py                   # SupportBotState TypedDict
 │   ├── graph.py                   # StateGraph definition + compile
 │   └── nodes/
-│       ├── safety_gate.py         # Presidio + Rival (asyncio.gather)
+│       ├── safety_gate.py         # Presidio + Rival (parallel graph nodes)
 │       ├── query_intelligence.py  # Structured LLM call
 │       ├── session_memory.py      # History trimming
 │       ├── context_retrieval.py   # PageIndex + MongoDB
@@ -123,7 +123,7 @@ apple-support-bot/
 ├── prep/
 │   └── index_docs.py              # Offline: PageIndex → MongoDB
 ├── resilience/
-│   ├── breakers.py                # pybreaker circuit breakers
+│   ├── breaker.py                 # pybreaker circuit breakers
 │   └── retry.py                   # tenacity retry decorators
 ├── middleware/
 │   ├── auth.py                    # JWT verification
@@ -131,9 +131,14 @@ apple-support-bot/
 │   └── input_guard.py             # Length + encoding check
 ├── observability/
 │   └── logging.py                 # structlog setup
+├── evals/                         # Offline, live, and trace evals + golden dataset
+├── tests/                         # Unit tests (uv run pytest)
+├── terraform/                     # AWS ECS/RDS/ALB infrastructure
+├── .github/workflows/             # CI, eval gate, deploy, nightly evals
 ├── Dockerfile
 ├── docker-compose.yml
-├── requirements.txt
+├── Makefile
+├── pyproject.toml / uv.lock
 └── .env.example
 ```
 
@@ -148,13 +153,13 @@ Key variables:
 | `LOW_COMPLEXITY_MODEL` | `gemini-2.0-flash` | Model for simple queries |
 | `HIGH_COMPLEXITY_MODEL` | `gemini-2.5-pro` | Model for complex queries. Set to `gpt-4o` to use OpenAI |
 | `FAITHFULNESS_THRESHOLD` | `0.7` | Ragas score below this triggers a warning |
-| `COMPLETENESS_THRESHOLD` | `0.6` | Completeness score below this triggers a warning |
-| `MAX_INPUT_CHARS` | `4000` | Queries longer than this are rejected with 400 |
+| `COMPLETENESS_THRESHOLD` | `0.7` | Completeness score below this triggers a warning |
+| `MAX_INPUT_CHARS` | `10000` | Queries longer than this are rejected with 400 |
 | `MAX_SESSION_TURNS` | `10` | How many conversation turns to keep in context |
 
 ## Prompt versioning
 
-Prompts live in `prompts/v{n}/`. The active version is set in `graph/nodes/query_intelligence.py`. The version string is stored in LangGraph state and logged with every request, so you can correlate quality changes with prompt changes in LangSmith.
+Prompts live in `prompts/v{n}/`. The active version is set in `agent/nodes/query_intelligence.py`. The version string is stored in LangGraph state and logged with every request, so you can correlate quality changes with prompt changes in LangSmith.
 
 To make a new prompt version: copy `prompts/v1/` to `prompts/v2/`, edit, and update `PROMPT_VERSION` in the node.
 
@@ -164,7 +169,7 @@ To make a new prompt version: copy `prompts/v1/` to `prompts/v2/`, edit, and upd
 |---|---|---|
 | Rival (attack detection) | 5 failures | Allow request through, log warning |
 | PageIndex / MongoDB | 5 failures | Empty context, LLM answers from knowledge |
-| GPTCache | 10 failures | Skip cache, continue normally |
+| GPTCache | 5 failures | Skip cache, continue normally |
 | LLM provider | — (tenacity retries x3) | 503 to user |
 
 ## What's next
