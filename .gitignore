@@ -10,3 +10,16 @@ wheels/
 .venv
 
 .env
+
+# Tooling caches
+.ruff_cache/
+.pytest_cache/
+.mypy_cache/
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+
+# Eval reports (generated in CI)
+evals/reports/

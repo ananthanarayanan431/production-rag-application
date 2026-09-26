@@ -1,0 +1,12 @@
+.venv
+.env
+.git
+.github
+**/__pycache__
+.ruff_cache
+.pytest_cache
+.mypy_cache
+evals/reports
+terraform
+tests
+services
