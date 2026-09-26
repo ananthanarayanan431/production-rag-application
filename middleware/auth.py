@@ -3,9 +3,9 @@ from jose import JWTError
 from fastapi import Request
 from fastapi import HTTPException
 from fastapi import status
-from config.setting import CustomerSupportBotSettings
+from config.setting import get_settings
 
-settings = CustomerSupportBotSettings()
+settings = get_settings()
 
 async def authenticate_middleware(request: Request, call_next):
 
@@ -18,7 +18,7 @@ async def authenticate_middleware(request: Request, call_next):
     
     token = auth_header.removeprefix("Bearer ").strip()
     try:
-        payload = jwt.decode(token, settings.JWT_SECRET, algorithms=[settings.JWT_ALGORITHM])
+        payload = jwt.decode(token, settings.JWT_SECRET.get_secret_value(), algorithms=[settings.JWT_ALGORITHM])
         request.state.user_id = payload["sub"]
         request.state.user_payload = payload
     except JWTError as e:

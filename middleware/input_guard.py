@@ -2,9 +2,9 @@ import json
 from fastapi import Request
 from fastapi import HTTPException
 from fastapi import status
-from config.setting import CustomerSupportBotSettings
+from config.setting import get_settings
 
-settings = CustomerSupportBotSettings()
+settings = get_settings()
 
 
 async def input_guard_middleware(request: Request, call_next):
