@@ -1,4 +1,7 @@
+import logging
+
 import httpx
+from tenacity import before_sleep_log
 from tenacity import retry
 from tenacity import stop_after_attempt
 from tenacity import wait_exponential
@@ -13,7 +16,7 @@ http_retry = retry(
     wait=wait_exponential(multiplier=1, min=4, max=15),
     retry=retry_if_exception_type((httpx.TimeoutException, httpx.HTTPStatusError)),
     reraise=True,
-    logger=logger,
+    before_sleep=before_sleep_log(logger, logging.WARNING),
 )
 
 llm_retry = retry(
@@ -21,5 +24,5 @@ llm_retry = retry(
     wait=wait_exponential(multiplier=1, min=4, max=25),
     retry=retry_if_exception_type((httpx.TimeoutException, httpx.HTTPStatusError)),
     reraise=True,
-    logger=logger,
+    before_sleep=before_sleep_log(logger, logging.WARNING),
 )

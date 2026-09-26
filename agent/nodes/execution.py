@@ -94,8 +94,9 @@ async def generate_subquery_node(state: SupportBotState) -> dict:
         state["complexity"],
     )
     log.info("subquery_complete", model=model_name)
-    # sub_responses uses an append reducer — each parallel node safely adds one item
-    return {"sub_responses": [response], "model_used": model_name}
+    # sub_responses uses an append reducer — each parallel node safely adds one item.
+    # model_used has no reducer, so it is set once in merge_subqueries_node instead.
+    return {"sub_responses": [response]}
 
 
 async def merge_subqueries_node(state: SupportBotState) -> dict:
@@ -103,7 +104,8 @@ async def merge_subqueries_node(state: SupportBotState) -> dict:
     merged = "\n\n".join(
         f"**Part {i+1}:** {r}" for i, r in enumerate(state.get("sub_responses", []))
     )
-    return {"raw_response": merged}
+    model_name = settings.LOW_COMPLEXITY_MODEL if state["complexity"] == "low" else settings.HIGH_COMPLEXITY_MODEL
+    return {"raw_response": merged, "model_used": model_name}
 
 
 # ── Routing ───────────────────────────────────────────────────────────────────
