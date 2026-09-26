@@ -4,6 +4,6 @@ from langgraph.graph import END
 from langchain_openai.chat_models import ChatOpenAI
 
 
-from .state import CustomerSupportBotState
+from agent.state import SupportBotState
 
 

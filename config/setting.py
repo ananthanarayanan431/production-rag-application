@@ -1,11 +1,14 @@
 from functools import lru_cache
-from typing import Literal
+from typing import Annotated, Literal
 
-from pydantic import Field, SecretStr, model_validator
+from pydantic import AfterValidator, Field, HttpUrl, SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # Only HMAC algorithms: the service verifies tokens with a shared secret, not a key pair.
 JWTAlgorithm = Literal["HS256", "HS384", "HS512"]
+
+# Validated as a URL but stored as a str without a trailing slash, so call sites can f"{url}/path".
+ServiceUrl = Annotated[HttpUrl, AfterValidator(lambda url: str(url).rstrip("/"))]
 
 
 class CustomerSupportBotSettings(BaseSettings):
@@ -26,6 +29,22 @@ class CustomerSupportBotSettings(BaseSettings):
     JWT_REFRESH_TOKEN_SECRET: SecretStr = Field(min_length=32)
     JWT_REFRESH_TOKEN_ALGORITHM: JWTAlgorithm = "HS256"
     JWT_REFRESH_TOKEN_EXPIRATION: int = Field(default=86400, gt=0, description="Refresh token lifetime in seconds")
+
+    # External services
+    GPTCACHE_URL: ServiceUrl
+    RIVAL_URL: ServiceUrl
+    MONGODB_URI: SecretStr
+
+    # Generation
+    LOW_COMPLEXITY_MODEL: str = "gemini-2.0-flash"
+    HIGH_COMPLEXITY_MODEL: str = "gemini-2.5-pro"
+
+    # Output validation
+    FAITHFULNESS_THRESHOLD: float = Field(default=0.7, ge=0.0, le=1.0)
+    COMPLETENESS_THRESHOLD: float = Field(default=0.7, ge=0.0, le=1.0)
+
+    # Session memory
+    MAX_SESSION_TURNS: int = Field(default=10, gt=0)
 
     @model_validator(mode="after")
     def _validate_jwt(self) -> "CustomerSupportBotSettings":

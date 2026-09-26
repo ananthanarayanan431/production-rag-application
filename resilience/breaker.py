@@ -36,10 +36,10 @@ pageindex_breaker = pybreaker.CircuitBreaker(
     ],
 )
 
-gptcahce_breaker = pybreaker.CircuitBreaker(
+gptcache_breaker = pybreaker.CircuitBreaker(
     fail_max=CIRCUIT_BREAKER_FAIL_MAX,
     reset_timeout=CIRCUIT_BREAKER_RESET_TIMEOUT,
-    name="gptcahce_breaker",
+    name="gptcache_breaker",
     listeners=[
         pybreaker.CircuitBreakerListener()
     ],
