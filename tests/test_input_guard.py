@@ -1,7 +1,6 @@
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-from fastapi import HTTPException
 
 from config.setting import get_settings
 from middleware.input_guard import input_guard_middleware
@@ -34,18 +33,18 @@ async def test_passes_valid_query(make_request):
 async def test_rejects_empty_query(make_request):
     request = make_request(body={"query": ""})
     call_next = AsyncMock()
-    with pytest.raises(HTTPException) as exc_info:
-        await input_guard_middleware(request, call_next)
-    assert exc_info.value.status_code == 400
+    response = await input_guard_middleware(request, call_next)
+    assert response.status_code == 400
+    call_next.assert_not_called()
 
 
 @pytest.mark.asyncio
 async def test_rejects_oversized_query(make_request):
     request = make_request(body={"query": "x" * (get_settings().MAX_INPUT_CHARS + 1)})
     call_next = AsyncMock()
-    with pytest.raises(HTTPException) as exc_info:
-        await input_guard_middleware(request, call_next)
-    assert exc_info.value.status_code == 400
+    response = await input_guard_middleware(request, call_next)
+    assert response.status_code == 400
+    call_next.assert_not_called()
 
 
 @pytest.mark.asyncio
@@ -54,3 +53,12 @@ async def test_skips_non_query_endpoints(make_request):
     call_next = AsyncMock(return_value="ok")
     result = await input_guard_middleware(request, call_next)
     assert result == "ok"
+
+
+@pytest.mark.asyncio
+async def test_rejects_non_object_body(make_request):
+    request = make_request(body=["not", "an", "object"])
+    call_next = AsyncMock()
+    response = await input_guard_middleware(request, call_next)
+    assert response.status_code == 400
+    call_next.assert_not_called()

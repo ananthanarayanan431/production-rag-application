@@ -1,28 +1,38 @@
-from jose import jwt 
-from jose import JWTError
-from fastapi import Request
-from fastapi import HTTPException
-from fastapi import status
+from fastapi import Request, status
+from fastapi.responses import JSONResponse
+from jose import JWTError, jwt
+
 from config.setting import get_settings
 
 settings = get_settings()
 
-async def authenticate_middleware(request: Request, call_next):
+_PUBLIC_PATHS = ("/health", "/docs", "/openapi.json")
 
-    if request.url.path in ("/health", "/docs", "/openapi.json"):
+
+def _unauthorized() -> JSONResponse:
+    # HTTP middleware runs outside FastAPI's exception handlers, so raising
+    # HTTPException here would surface as a 500; return the response instead.
+    return JSONResponse(status_code=status.HTTP_401_UNAUTHORIZED, content={"detail": "Unauthorized"})
+
+
+async def authenticate_middleware(request: Request, call_next):
+    if request.url.path in _PUBLIC_PATHS:
         return await call_next(request)
-    
+
     auth_header = request.headers.get("Authorization", "")
     if not auth_header.startswith("Bearer "):
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized")
-    
+        return _unauthorized()
+
     token = auth_header.removeprefix("Bearer ").strip()
     try:
         payload = jwt.decode(token, settings.JWT_SECRET.get_secret_value(), algorithms=[settings.JWT_ALGORITHM])
-        request.state.user_id = payload["sub"]
-        request.state.user_payload = payload
-    except JWTError as e:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=f"Unauthorized: {e}")
-    
-    return await call_next(request)
+    except JWTError:
+        return _unauthorized()
 
+    user_id = payload.get("sub")
+    if not user_id:
+        return _unauthorized()
+
+    request.state.user_id = user_id
+    request.state.user_payload = payload
+    return await call_next(request)

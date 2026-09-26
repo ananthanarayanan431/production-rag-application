@@ -18,6 +18,8 @@ class CustomerSupportBotSettings(BaseSettings):
         extra="ignore",
         case_sensitive=True,
         frozen=True,
+        # Validation errors otherwise echo every loaded value, secrets included, into startup logs.
+        hide_input_in_errors=True,
     )
 
     MAX_INPUT_CHARS: int = Field(default=10_000, gt=0, le=100_000)

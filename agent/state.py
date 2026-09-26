@@ -3,7 +3,15 @@ from typing import Literal
 from typing import Annotated
 
 def append_list(existing: list, new: list) -> list:
-    """Reducer that appends to a list — used for parallel sub_responses."""
+    """
+    Reducer that appends to a list — used for parallel sub_responses.
+
+    An explicit empty list resets it. State is checkpointed per session, so
+    main.py passes sub_responses=[] each turn to drop the previous turn's
+    answers; nodes always return a non-empty list and keep appending.
+    """
+    if new == []:
+        return []
     return (existing or []) + (new or [])
 
 
