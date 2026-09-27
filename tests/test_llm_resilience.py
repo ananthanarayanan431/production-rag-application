@@ -59,7 +59,7 @@ def _response(status: int) -> httpx.Response:
 )
 async def test_llm_retry_only_retries_transient_errors(error, expected_attempts):
     call = AsyncMock(side_effect=error)
-    wrapped = llm_retry.copy(wait=wait_none())(call)
+    wrapped = llm_retry(call).retry_with(wait=wait_none())
 
     with pytest.raises(type(error)):
         await wrapped()
