@@ -11,8 +11,8 @@ interface ScoreMeterProps {
 export function ScoreMeter({ label, score, threshold = 0.7, hint }: ScoreMeterProps) {
   const ok = score >= threshold
   return (
-    <div className="flex min-w-32 flex-1 items-center gap-2" title={hint}>
-      <span className="text-xs text-zinc-500 dark:text-zinc-400">{label}</span>
+    <div className="flex basis-full items-center gap-2 sm:basis-0 sm:flex-1" title={hint}>
+      <span className="w-24 text-xs text-zinc-500 sm:w-auto dark:text-zinc-400">{label}</span>
       <div
         role="meter"
         aria-label={label}

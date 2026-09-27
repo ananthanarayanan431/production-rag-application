@@ -170,7 +170,9 @@ function Details({ message }: { message: AssistantMessage }) {
           </span>
         )}
         <span className="ml-auto flex">
-          <CopyButton text={message.content} label="Copy answer" />
+          <CopyButton text={message.content} label="Copy answer">
+            Copy
+          </CopyButton>
           <CopyButton text={meta.request_id} label="Copy request ID for support">
             <span className="hidden font-mono sm:inline">{meta.request_id.slice(0, 8)}</span>
           </CopyButton>
