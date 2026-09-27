@@ -2,9 +2,8 @@ import json
 
 import motor.motor_asyncio
 import pybreaker
-from langchain_google_genai import ChatGoogleGenerativeAI
-
 from agent.state import SupportBotState
+from config.llm import openrouter_chat
 from config.setting import get_settings
 from observability.logging import get_logger
 from resilience.breaker import pageindex_breaker
@@ -20,7 +19,7 @@ def get_mongo():
     return _mongo_client.support_bot
 
 
-_tree_search_llm = ChatGoogleGenerativeAI(model="gemini-2.0-flash", temperature=0)
+_tree_search_llm = openrouter_chat(settings.LOW_COMPLEXITY_MODEL, temperature=0)
 
 _TREE_SEARCH_PROMPT = """
 You are given a question and a tree structure of an Apple support document.

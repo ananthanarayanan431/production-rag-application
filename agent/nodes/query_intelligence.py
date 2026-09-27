@@ -1,10 +1,11 @@
 from pathlib import Path
 from typing import Literal
 
-from langchain_google_genai import ChatGoogleGenerativeAI
 from pydantic import BaseModel
 
 from agent.state import SupportBotState
+from config.llm import openrouter_chat
+from config.setting import get_settings
 from observability.logging import get_logger
 from resilience.retry import llm_retry
 
@@ -19,8 +20,11 @@ class QueryAnalysis(BaseModel):
     needs_decomp: bool
 
 
-_llm = ChatGoogleGenerativeAI(model="gemini-2.0-flash").with_structured_output(
-    QueryAnalysis
+settings = get_settings()
+
+# function_calling is the structured-output mode supported by the most OpenRouter providers.
+_llm = openrouter_chat(settings.LOW_COMPLEXITY_MODEL).with_structured_output(
+    QueryAnalysis, method="function_calling"
 )
 
 

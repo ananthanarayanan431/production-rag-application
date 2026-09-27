@@ -21,7 +21,7 @@ POST /query
        ├─ query_intelligence  1 structured LLM call → intent, sub_queries, complexity
        ├─ session_memory    LangGraph PostgresSaver checkpointer
        ├─ context_retrieval PageIndex tree search + MongoDB
-       ├─ execution         Gemini Flash / Pro / parallel sub-queries (Send API)
+       ├─ execution         Low / high complexity model via OpenRouter / parallel sub-queries (Send API)
        ├─ output_validation Ragas faithfulness + custom completeness metric
        └─ cache_store       GPTCache write + structlog summary
 ```
@@ -39,8 +39,9 @@ POST /query
 | Semantic caching | GPTCache (server mode) |
 | RAG retrieval | PageIndex + MongoDB (motor) |
 | Session memory | LangGraph PostgresSaver + asyncpg |
-| LLM (low complexity) | Gemini 2.0 Flash (langchain-google-genai) |
-| LLM (high complexity) | Gemini 2.5 Pro or GPT-4o (configurable) |
+| LLM provider | OpenRouter (OpenAI-compatible API via langchain-openai) |
+| LLM (low complexity) | `google/gemini-2.0-flash-001` (configurable) |
+| LLM (high complexity) | `google/gemini-2.5-pro` (configurable) |
 | Hallucination detection | Ragas Faithfulness |
 | Completeness check | Custom LLM-as-judge metric |
 | Observability (LLM) | LangSmith |
@@ -148,8 +149,11 @@ Key variables:
 
 | Variable | Default | Description |
 |---|---|---|
-| `LOW_COMPLEXITY_MODEL` | `gemini-2.0-flash` | Model for simple queries |
-| `HIGH_COMPLEXITY_MODEL` | `gemini-2.5-pro` | Model for complex queries. Set to `gpt-4o` to use OpenAI |
+| `OPENROUTER_API_KEY` | — (required) | Key for every LLM call |
+| `OPENROUTER_BASE_URL` | `https://openrouter.ai/api/v1` | OpenAI-compatible endpoint all models are called through |
+| `LOW_COMPLEXITY_MODEL` | `google/gemini-2.0-flash-001` | OpenRouter model slug for simple queries, query analysis, tree search and the completeness judge |
+| `HIGH_COMPLEXITY_MODEL` | `google/gemini-2.5-pro` | OpenRouter model slug for complex queries (e.g. `openai/gpt-4o`) |
+| `FAITHFULNESS_MODEL` | `openai/gpt-4o-mini` | OpenRouter model slug for the Ragas faithfulness judge |
 | `FAITHFULNESS_THRESHOLD` | `0.7` | Ragas score below this triggers a warning |
 | `COMPLETENESS_THRESHOLD` | `0.7` | Completeness score below this triggers a warning |
 | `MAX_INPUT_CHARS` | `10000` | Queries longer than this are rejected with 400 |

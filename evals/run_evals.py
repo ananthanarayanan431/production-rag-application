@@ -25,10 +25,10 @@ DATASET_PATH = Path(eval_settings.DATASET_FILE)
 BASELINE_PATH = Path(eval_settings.BASELINE_FILE)
 
 TOKEN_COST_PER_1K = {
-    "gemini-2.0-flash": 0.0001,
-    "gemini-2.5-pro": 0.007,
-    "gpt-4o": 0.005,
-    "gpt-4o-mini": 0.00015,
+    "google/gemini-2.0-flash-001": 0.0001,
+    "google/gemini-2.5-pro": 0.007,
+    "openai/gpt-4o": 0.005,
+    "openai/gpt-4o-mini": 0.00015,
 }
 
 

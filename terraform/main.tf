@@ -168,10 +168,9 @@ resource "aws_ecs_task_definition" "app" {
       ]
       secrets = [
         { name = "LANGCHAIN_API_KEY", valueFrom = aws_secretsmanager_secret.langchain_api_key.arn },
-        { name = "GOOGLE_API_KEY", valueFrom = aws_secretsmanager_secret.google_api_key.arn },
+        { name = "OPENROUTER_API_KEY", valueFrom = aws_secretsmanager_secret.openrouter_api_key.arn },
         { name = "JWT_SECRET", valueFrom = aws_secretsmanager_secret.jwt_secret.arn },
         { name = "JWT_REFRESH_TOKEN_SECRET", valueFrom = aws_secretsmanager_secret.jwt_refresh_token_secret.arn },
-        { name = "OPENAI_API_KEY", valueFrom = aws_secretsmanager_secret.openai_api_key.arn },
       ]
       logConfiguration = {
         logDriver = "awslogs"
@@ -475,8 +474,8 @@ resource "aws_secretsmanager_secret" "langchain_api_key" {
   name = "support-bot/langchain-api-key"
 }
 
-resource "aws_secretsmanager_secret" "google_api_key" {
-  name = "support-bot/google-api-key"
+resource "aws_secretsmanager_secret" "openrouter_api_key" {
+  name = "support-bot/openrouter-api-key"
 }
 
 resource "aws_secretsmanager_secret" "jwt_secret" {
@@ -485,10 +484,6 @@ resource "aws_secretsmanager_secret" "jwt_secret" {
 
 resource "aws_secretsmanager_secret" "jwt_refresh_token_secret" {
   name = "support-bot/jwt-refresh-token-secret"
-}
-
-resource "aws_secretsmanager_secret" "openai_api_key" {
-  name = "support-bot/openai-api-key"
 }
 
 # --- IAM ---
@@ -522,10 +517,9 @@ resource "aws_iam_role_policy" "ecs_execution_secrets" {
       Action = ["secretsmanager:GetSecretValue"]
       Resource = [
         aws_secretsmanager_secret.langchain_api_key.arn,
-        aws_secretsmanager_secret.google_api_key.arn,
+        aws_secretsmanager_secret.openrouter_api_key.arn,
         aws_secretsmanager_secret.jwt_secret.arn,
         aws_secretsmanager_secret.jwt_refresh_token_secret.arn,
-        aws_secretsmanager_secret.openai_api_key.arn,
       ]
     }]
   })

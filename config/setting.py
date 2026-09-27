@@ -38,9 +38,16 @@ class CustomerSupportBotSettings(BaseSettings):
     MONGODB_URI: SecretStr
     POSTGRES_DSN: SecretStr
 
-    # Generation
-    LOW_COMPLEXITY_MODEL: str = "gemini-2.0-flash"
-    HIGH_COMPLEXITY_MODEL: str = "gemini-2.5-pro"
+    # LLM provider: every model call goes through OpenRouter's OpenAI-compatible API
+    OPENROUTER_API_KEY: SecretStr
+    OPENROUTER_BASE_URL: ServiceUrl = "https://openrouter.ai/api/v1"
+
+    # Generation (OpenRouter model slugs: "<provider>/<model>")
+    LOW_COMPLEXITY_MODEL: str = "google/gemini-2.0-flash-001"
+    HIGH_COMPLEXITY_MODEL: str = "google/gemini-2.5-pro"
+
+    # Output validation judge for Ragas faithfulness
+    FAITHFULNESS_MODEL: str = "openai/gpt-4o-mini"
 
     # Output validation
     FAITHFULNESS_THRESHOLD: float = Field(default=0.7, ge=0.0, le=1.0)

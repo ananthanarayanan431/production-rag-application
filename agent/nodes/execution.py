@@ -1,10 +1,9 @@
 from pathlib import Path
 
-from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain_openai import ChatOpenAI
 from langgraph.types import Send
 
 from agent.state import SupportBotState
+from config.llm import openrouter_chat
 from config.setting import get_settings
 from observability.logging import get_logger
 from resilience.retry import llm_retry
@@ -16,11 +15,8 @@ _GENERATION_PROMPT = Path("prompts/v1/generation.txt").read_text()
 
 def _get_model(complexity: str):
     if complexity == "low":
-        return ChatGoogleGenerativeAI(model=settings.LOW_COMPLEXITY_MODEL)
-    model_name = settings.HIGH_COMPLEXITY_MODEL
-    if model_name.startswith("gpt"):
-        return ChatOpenAI(model=model_name)
-    return ChatGoogleGenerativeAI(model=model_name)
+        return openrouter_chat(settings.LOW_COMPLEXITY_MODEL)
+    return openrouter_chat(settings.HIGH_COMPLEXITY_MODEL)
 
 
 def _build_prompt(query: str, context: list[str], history: list[dict]) -> str:

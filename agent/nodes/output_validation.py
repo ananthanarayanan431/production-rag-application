@@ -7,11 +7,11 @@ Output validation: two independent LangGraph nodes run in parallel.
 Both fan out from the execution node(s) and converge at validation_merge.
 asyncio.gather is NOT used here — LangGraph handles the concurrency.
 """
-from openai import AsyncOpenAI
 from ragas.llms import llm_factory
 from ragas.metrics.collections import Faithfulness
 
 from agent.state import SupportBotState
+from config.llm import openrouter_client
 from config.setting import get_settings
 from metrics.completeness import score_completeness
 from observability.logging import get_logger
@@ -19,7 +19,7 @@ from observability.logging import get_logger
 settings = get_settings()
 
 _faithfulness_scorer = Faithfulness(
-    llm=llm_factory("gpt-4o-mini", client=AsyncOpenAI())
+    llm=llm_factory(settings.FAITHFULNESS_MODEL, client=openrouter_client())
 )
 
 

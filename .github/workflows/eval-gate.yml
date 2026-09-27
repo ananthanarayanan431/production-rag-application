@@ -53,8 +53,7 @@ jobs:
 
       - name: Start app in background
         env:
-          GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
           LANGCHAIN_API_KEY: ${{ secrets.LANGCHAIN_API_KEY }}
           LANGCHAIN_TRACING_V2: "true"
           PAGEINDEX_API_KEY: ${{ secrets.PAGEINDEX_API_KEY }}

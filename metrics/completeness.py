@@ -2,8 +2,8 @@ import re
 from pathlib import Path
 
 import structlog
-from langchain_google_genai import ChatGoogleGenerativeAI
-
+from config.llm import openrouter_chat
+from config.setting import get_settings
 from resilience.retry import llm_retry
 
 logger = structlog.get_logger().bind(metric="completeness")
@@ -12,7 +12,7 @@ _PROMPT = Path("prompts/v1/completeness_judge.txt").read_text()
 _SCORE_PATTERN = re.compile(r"\d+(?:\.\d+)?")
 _FALLBACK_SCORE = 0.5
 
-_judge = ChatGoogleGenerativeAI(model="gemini-2.0-flash", temperature=0)
+_judge = openrouter_chat(get_settings().LOW_COMPLEXITY_MODEL, temperature=0)
 
 
 @llm_retry
