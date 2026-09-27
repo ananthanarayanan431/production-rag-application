@@ -1,4 +1,4 @@
-# Apple Support Bot
+# Support Bot
 
 A production-ready AI support bot for Apple devices and services.
 

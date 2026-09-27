@@ -46,7 +46,7 @@ async def lifespan(app: FastAPI):
     await close_llm_clients()
 
 
-app = FastAPI(title="Apple Support Bot", lifespan=lifespan)
+app = FastAPI(title="Support Bot", lifespan=lifespan)
 
 # ── Middleware (order matters: added last = runs first) ───────────────────────
 
