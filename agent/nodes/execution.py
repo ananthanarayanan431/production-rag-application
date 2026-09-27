@@ -13,10 +13,8 @@ settings = get_settings()
 _GENERATION_PROMPT = Path("prompts/v1/generation.txt").read_text()
 
 
-def _get_model(complexity: str):
-    if complexity == "low":
-        return openrouter_chat(settings.LOW_COMPLEXITY_MODEL)
-    return openrouter_chat(settings.HIGH_COMPLEXITY_MODEL)
+def _model_name(complexity: str) -> str:
+    return settings.LOW_COMPLEXITY_MODEL if complexity == "low" else settings.HIGH_COMPLEXITY_MODEL
 
 
 def _build_prompt(query: str, context: list[str], history: list[dict]) -> str:
@@ -35,11 +33,10 @@ def _build_prompt(query: str, context: list[str], history: list[dict]) -> str:
 
 @llm_retry
 async def _generate(query: str, context: list[str], history: list[dict], complexity: str) -> tuple[str, str]:
-    model = _get_model(complexity)
+    model_name = _model_name(complexity)
     prompt = _build_prompt(query, context, history)
-    result = await model.ainvoke(prompt)
-    model_name = settings.LOW_COMPLEXITY_MODEL if complexity == "low" else settings.HIGH_COMPLEXITY_MODEL
-    return result.content, model_name
+    result = await openrouter_chat(model_name).ainvoke(prompt)
+    return result.text, model_name
 
 
 async def generate_flash_node(state: SupportBotState) -> dict:
@@ -101,8 +98,7 @@ async def merge_subqueries_node(state: SupportBotState) -> dict:
     merged = "\n\n".join(
         f"**Part {i+1}:** {r}" for i, r in enumerate(state.get("sub_responses", []))
     )
-    model_name = settings.LOW_COMPLEXITY_MODEL if state["complexity"] == "low" else settings.HIGH_COMPLEXITY_MODEL
-    return {"raw_response": merged, "model_used": model_name}
+    return {"raw_response": merged, "model_used": _model_name(state["complexity"])}
 
 
 # ── Routing ───────────────────────────────────────────────────────────────────

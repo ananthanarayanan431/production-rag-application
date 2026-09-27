@@ -151,6 +151,7 @@ Key variables:
 |---|---|---|
 | `OPENROUTER_API_KEY` | — (required) | Key for every LLM call |
 | `OPENROUTER_BASE_URL` | `https://openrouter.ai/api/v1` | OpenAI-compatible endpoint all models are called through |
+| `LLM_TIMEOUT_SECONDS` | `60` | Per-request timeout for every LLM call; transient failures are retried up to 3 times |
 | `LOW_COMPLEXITY_MODEL` | `google/gemini-2.0-flash-001` | OpenRouter model slug for simple queries, query analysis, tree search and the completeness judge |
 | `HIGH_COMPLEXITY_MODEL` | `google/gemini-2.5-pro` | OpenRouter model slug for complex queries (e.g. `openai/gpt-4o`) |
 | `FAITHFULNESS_MODEL` | `openai/gpt-4o-mini` | OpenRouter model slug for the Ragas faithfulness judge |

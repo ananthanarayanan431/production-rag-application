@@ -7,6 +7,7 @@ from config.llm import openrouter_chat
 from config.setting import get_settings
 from observability.logging import get_logger
 from resilience.breaker import pageindex_breaker
+from resilience.retry import llm_retry
 
 settings = get_settings()
 
@@ -19,7 +20,7 @@ def get_mongo():
     return _mongo_client.support_bot
 
 
-_tree_search_llm = openrouter_chat(settings.LOW_COMPLEXITY_MODEL, temperature=0)
+_tree_search_llm = openrouter_chat(settings.LOW_COMPLEXITY_MODEL, temperature=0.0)
 
 _TREE_SEARCH_PROMPT = """
 You are given a question and a tree structure of an Apple support document.
@@ -56,6 +57,7 @@ def _strip_text(tree: list) -> list:
     return result
 
 
+@llm_retry
 async def _search_tree(tree: list, query: str) -> list[dict]:
     stripped = _strip_text(tree)
     prompt = _TREE_SEARCH_PROMPT.format(
@@ -63,7 +65,7 @@ async def _search_tree(tree: list, query: str) -> list[dict]:
         tree_json=json.dumps(stripped, indent=2),
     )
     result = await _tree_search_llm.ainvoke(prompt)
-    node_ids = json.loads(result.content)["node_list"]
+    node_ids = json.loads(result.text)["node_list"]
     node_map = _build_node_map(tree)
     return [node_map[nid] for nid in node_ids if nid in node_map]
 

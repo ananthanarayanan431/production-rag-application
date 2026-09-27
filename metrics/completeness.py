@@ -12,7 +12,7 @@ _PROMPT = Path("prompts/v1/completeness_judge.txt").read_text()
 _SCORE_PATTERN = re.compile(r"\d+(?:\.\d+)?")
 _FALLBACK_SCORE = 0.5
 
-_judge = openrouter_chat(get_settings().LOW_COMPLEXITY_MODEL, temperature=0)
+_judge = openrouter_chat(get_settings().LOW_COMPLEXITY_MODEL, temperature=0.0)
 
 
 @llm_retry

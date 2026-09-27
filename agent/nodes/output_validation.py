@@ -6,6 +6,10 @@ Output validation: two independent LangGraph nodes run in parallel.
 
 Both fan out from the execution node(s) and converge at validation_merge.
 asyncio.gather is NOT used here — LangGraph handles the concurrency.
+
+A scorer that still fails after retries fails closed (score 0.0): the answer is
+returned but marked unvalidated, so it is never cached. A judge outage must not
+turn an already generated answer into a 503.
 """
 from ragas.llms import llm_factory
 from ragas.metrics.collections import Faithfulness
@@ -15,8 +19,11 @@ from config.llm import openrouter_client
 from config.setting import get_settings
 from metrics.completeness import score_completeness
 from observability.logging import get_logger
+from resilience.retry import llm_retry
 
 settings = get_settings()
+
+_FAILED_SCORE = 0.0
 
 _faithfulness_scorer = Faithfulness(
     llm=llm_factory(settings.FAITHFULNESS_MODEL, client=openrouter_client())
@@ -34,25 +41,40 @@ async def faithfulness_node(state: SupportBotState) -> dict:
         log.info("faithfulness_skipped", reason="no_context")
         return {"faithfulness_score": 1.0}
 
-    result = await _faithfulness_scorer.ascore(
-        user_input=state["scrubbed_query"],
-        response=state["raw_response"],
-        retrieved_contexts=context,
-    )
-    score = float(result.value)
+    try:
+        score = await _score_faithfulness(state["scrubbed_query"], state["raw_response"], context)
+    except Exception as exc:
+        log.error("faithfulness_failed", error=str(exc), error_type=type(exc).__name__)
+        return {"faithfulness_score": _FAILED_SCORE}
+
     log.info("faithfulness_complete", score=round(score, 3))
     return {"faithfulness_score": score}
+
+
+@llm_retry
+async def _score_faithfulness(query: str, response: str, context: list[str]) -> float:
+    result = await _faithfulness_scorer.ascore(
+        user_input=query,
+        response=response,
+        retrieved_contexts=context,
+    )
+    return max(0.0, min(1.0, float(result.value)))
 
 
 # ── Node B: Completeness (LLM-as-judge) ──────────────────────────────────────
 
 async def completeness_node(state: SupportBotState) -> dict:
     log = get_logger(state["request_id"], node="completeness")
-    score = await score_completeness(
-        intent=state["intent"],
-        sub_queries=state["sub_queries"],
-        response=state["raw_response"],
-    )
+    try:
+        score = await score_completeness(
+            intent=state["intent"],
+            sub_queries=state["sub_queries"],
+            response=state["raw_response"],
+        )
+    except Exception as exc:
+        log.error("completeness_failed", error=str(exc), error_type=type(exc).__name__)
+        return {"completeness_score": _FAILED_SCORE}
+
     log.info("completeness_complete", score=round(score, 3))
     return {"completeness_score": score}
 

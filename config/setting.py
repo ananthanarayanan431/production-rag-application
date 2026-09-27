@@ -41,6 +41,7 @@ class CustomerSupportBotSettings(BaseSettings):
     # LLM provider: every model call goes through OpenRouter's OpenAI-compatible API
     OPENROUTER_API_KEY: SecretStr
     OPENROUTER_BASE_URL: ServiceUrl = "https://openrouter.ai/api/v1"
+    LLM_TIMEOUT_SECONDS: float = Field(default=60.0, gt=0, description="Per-request timeout for every LLM call")
 
     # Generation (OpenRouter model slugs: "<provider>/<model>")
     LOW_COMPLEXITY_MODEL: str = "google/gemini-2.0-flash-001"

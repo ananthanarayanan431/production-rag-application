@@ -10,6 +10,7 @@ from pydantic import BaseModel
 from slowapi.errors import RateLimitExceeded
 
 from agent.graph import build_graph
+from config.llm import close_llm_clients
 from config.setting import get_settings
 from middleware.auth import authenticate_middleware
 from middleware.input_guard import input_guard_middleware
@@ -42,6 +43,7 @@ async def lifespan(app: FastAPI):
     _graph = await build_graph(_pg_pool)
     yield
     await _pg_pool.close()
+    await close_llm_clients()
 
 
 app = FastAPI(title="Apple Support Bot", lifespan=lifespan)
