@@ -8,3 +8,6 @@ export const SUGGESTED_PROMPTS = [
   'Is accidental water damage covered under my protection plan?',
   'My wireless earbuds keep disconnecting. How do I fix that?',
 ]
+
+/** Colours the score meters; should match FAITHFULNESS/COMPLETENESS_THRESHOLD on the API. */
+export const SCORE_THRESHOLD = Number(import.meta.env.VITE_SCORE_THRESHOLD ?? 0.7)

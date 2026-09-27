@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useReducer, useRef } from 'react'
-import { isAbortError, sendQuery } from '../lib/api'
+import { useCallback, useEffect, useLayoutEffect, useReducer, useRef } from 'react'
+import { ApiError, isAbortError, sendQuery } from '../lib/api'
 import { newId } from '../lib/id'
 import { readJson, writeJson } from '../lib/storage'
 import type { AssistantMessage, Conversation, UserMessage } from '../lib/types'
@@ -24,7 +24,9 @@ export function useConversations({ token, onUnauthorized }: Options) {
   const controllers = useRef(new Map<string, AbortController>())
   // Read the latest state inside async callbacks without re-creating them.
   const stateRef = useRef(state)
-  stateRef.current = state
+  useLayoutEffect(() => {
+    stateRef.current = state
+  }, [state])
 
   useEffect(() => writeJson(STORAGE_KEY, state), [state])
 
@@ -69,13 +71,14 @@ export function useConversations({ token, onUnauthorized }: Options) {
           : err instanceof Error
             ? err.message
             : 'Something went wrong.'
+        const status = err instanceof ApiError ? err.status : undefined
         dispatch({
           type: 'resolve',
           conversationId,
           assistantId,
-          patch: { status: 'error', error: message },
+          patch: { status: 'error', error: message, errorStatus: status },
         })
-        if ((err as { status?: number }).status === 401) onUnauthorized()
+        if (status === 401) onUnauthorized()
       } finally {
         controllers.current.delete(assistantId)
       }

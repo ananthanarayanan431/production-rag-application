@@ -38,6 +38,8 @@ export interface AssistantMessage {
   replyTo: string
   meta?: Omit<QueryResponse, 'response' | 'session_id'>
   error?: string
+  /** HTTP status of the failure; 0 for network errors. */
+  errorStatus?: number
   latencyMs?: number
 }
 

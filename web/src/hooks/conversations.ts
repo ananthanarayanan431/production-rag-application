@@ -95,7 +95,7 @@ export function conversationsReducer(
         ...c,
         messages: c.messages.map((m) =>
           m.id === action.assistantId && m.role === 'assistant'
-            ? { ...m, status: 'pending', error: undefined, createdAt: Date.now() }
+            ? { ...m, status: 'pending', error: undefined, errorStatus: undefined, createdAt: Date.now() }
             : m,
         ),
       }))
