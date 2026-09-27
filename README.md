@@ -52,48 +52,83 @@ POST /query
 
 ## Quickstart
 
-**1. Clone and configure**
+Requires [uv](https://docs.astral.sh/uv/), Node 24+ and Docker. Run `make` to list every target.
+
+**1. Install and configure**
 
 ```bash
-uv sync
-cp .env.example .env
-# Fill in your API keys, JWT_SECRET / JWT_REFRESH_TOKEN_SECRET (32+ chars each) and POSTGRES_DSN in .env
+make install     # Python deps + spaCy model, and web UI deps
+make env         # creates .env and web/.env from the examples
+# Fill in OPENROUTER_API_KEY, PAGEINDEX_API_KEY and JWT_SECRET / JWT_REFRESH_TOKEN_SECRET (32+ chars each) in .env
 ```
 
-**2. Index your Apple support documents**
+**2. Index your support documents** (once, needs MongoDB running)
 
 ```bash
-# Run once before starting the app
-uv run python -m prep.index_docs --pdf path/to/apple-support-guide.pdf --doc-id apple-support
+make mongodb
+make index-docs PDF=path/to/apple-support-guide.pdf
 ```
 
-**3. Start all services**
+**3. Start everything for development**
 
 ```bash
-docker compose up --build
+make dev
 ```
 
-This starts:
-- `app` — main FastAPI app on port 8000
-- `rival-service` — Rival AI microservice on port 8002
-- `gptcache` — GPTCache server on port 8001
-- `mongodb` — document trees on port 27017
-- `postgres` — session memory on port 5432
+This starts the backing services in Docker, then runs the API and the web UI with hot reload:
 
-**4. Make a request**
+| Service | Make target | Port |
+|---|---|---|
+| Web UI (Vite, proxies `/api` to the API) | `make web` | 5173 |
+| FastAPI app | `make api` | 8000 |
+| GPTCache semantic cache | `make gptcache` | 8001 |
+| Rival attack detection | `make rival` | 8002 |
+| MongoDB (document trees) | `make mongodb` | 27017 |
+| PostgreSQL (session memory) | `make postgres` | 5432 |
+
+Each service can be started on its own with its target; `make infra` starts only the backing services.
+
+**4. Open the UI**
+
+```bash
+make token       # prints a JWT signed with JWT_SECRET (SUB=user-id TTL=seconds to customise)
+```
+
+Open http://localhost:5173 and paste the token when asked.
+
+To run the whole stack in containers instead, including the production web build behind nginx, use `make up` (UI at http://localhost:3000) and `make down`.
+
+**Calling the API directly**
 
 ```bash
 curl -X POST http://localhost:8000/query \
-  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -H "Authorization: Bearer $(make -s token)" \
   -H "Content-Type: application/json" \
   -d '{"query": "How do I factory reset my MacBook Pro?", "session_id": "session-abc"}'
 ```
+
+## Web UI
+
+A React 19 + TypeScript + Tailwind CSS v4 app in [`web/`](web/):
+
+- Chat with multi-turn context: each chat keeps the API's `session_id`, so follow-ups use the conversation history.
+- Every answer shows whether it passed validation, its grounding (Ragas faithfulness) and completeness scores, the model used or a cache hit, latency, and a copyable request id for tracing.
+- Chats are kept in the browser: rename, delete, clear. Requests can be stopped, and failed ones retried.
+- Live API health indicator, JWT dialog that checks expiry, light and dark themes, mobile layout.
+
+In development Vite proxies `/api/*` to the API; in the container nginx does the same, so the API needs no CORS setup. Settings are in [`web/.env.example`](web/.env.example). Run `make test-web` and `make lint-web` for the UI's tests and checks.
 
 ## Project structure
 
 ```
 production-rag/
 ├── main.py                        # FastAPI app, /query endpoint
+├── web/                           # React + Tailwind UI (Vite; nginx in Docker)
+│   ├── src/components/            # Chat, sidebar, composer, token dialog
+│   ├── src/hooks/                 # Conversations store, health, theme, token
+│   └── src/lib/                   # API client, JWT decoding, storage
+├── scripts/
+│   └── make_token.py              # Mint a local JWT (make token)
 ├── config/
 │   └── setting.py                 # Settings via pydantic-settings (get_settings())
 ├── agent/

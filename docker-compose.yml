@@ -29,6 +29,17 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
+  # ── Web UI (nginx serving the React build, proxying /api to app) ─────────────
+  web:
+    build:
+      context: ./web
+      dockerfile: Dockerfile
+    ports:
+      - "3000:80"
+    depends_on:
+      - app
+    restart: unless-stopped
+
   # ── Rival AI attack detection microservice ──────────────────────────────────
   rival-service:
     build:
