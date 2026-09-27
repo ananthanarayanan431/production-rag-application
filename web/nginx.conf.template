@@ -1,0 +1,47 @@
+server {
+    listen 80;
+    server_name _;
+    root /usr/share/nginx/html;
+
+    server_tokens off;
+    include /etc/nginx/snippets/security-headers.conf;
+
+    gzip on;
+    gzip_types text/css application/javascript application/json image/svg+xml;
+
+    location = /healthz {
+        access_log off;
+        return 200 "ok\n";
+    }
+
+    # Same-origin API: the browser calls /api/*, nginx strips the prefix.
+    # Resolve the API host per request (not once at startup), so nginx starts even
+    # when the API isn't up yet and follows the API's IP when its container restarts.
+    resolver ${NGINX_RESOLVER} valid=10s ipv6=off;
+
+    location /api/ {
+        set $api_upstream ${API_UPSTREAM};
+        rewrite ^/api/(.*)$ /$1 break;
+        proxy_pass $api_upstream;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        # Multi-step LLM answers (retrieval, generation, validation) can be slow.
+        proxy_read_timeout 180s;
+        client_max_body_size 64k;
+    }
+
+    # Hashed build assets never change, so cache them for a year.
+    location /assets/ {
+        include /etc/nginx/snippets/security-headers.conf;
+        add_header Cache-Control "public, max-age=31536000, immutable";
+        try_files $uri =404;
+    }
+
+    location / {
+        include /etc/nginx/snippets/security-headers.conf;
+        add_header Cache-Control "no-cache";
+        try_files $uri /index.html;
+    }
+}
