@@ -9,6 +9,7 @@ _TEST_ENV = {
     "RIVAL_URL": "http://localhost:8002",
     "MONGODB_URI": "mongodb://localhost:27017",
     "POSTGRES_DSN": "postgresql://postgres:postgres@localhost:5432/support_bot",
+    "PAGEINDEX_API_KEY": "test-pageindex-key",
     "OPENROUTER_API_KEY": "test-openrouter-key",
 }
 

@@ -183,6 +183,7 @@ Key variables:
 
 | Variable | Default | Description |
 |---|---|---|
+| `PAGEINDEX_API_KEY` | — (required) | PageIndex API key (offline indexing and `/health/pageindex`) |
 | `OPENROUTER_API_KEY` | — (required) | Key for every LLM call |
 | `OPENROUTER_BASE_URL` | `https://openrouter.ai/api/v1` | OpenAI-compatible endpoint all models are called through |
 | `LLM_TIMEOUT_SECONDS` | `60` | Per-request timeout for every LLM call; transient failures are retried up to 3 times |

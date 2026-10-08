@@ -15,6 +15,7 @@ from config.setting import get_settings
 from middleware.auth import authenticate_middleware
 from middleware.input_guard import input_guard_middleware
 from middleware.rate_limit import limiter
+from observability.health import check_pageindex
 from observability.logging import configure_logging, get_logger
 
 configure_logging()
@@ -182,3 +183,12 @@ async def query_endpoint(body: QueryRequest, request: Request):
 @app.get("/health")
 async def health():
     return {"status": "ok", "graph_ready": _graph is not None}
+
+
+@app.get("/health/pageindex")
+async def health_pageindex():
+    try:
+        await check_pageindex()
+    except Exception as exc:
+        return JSONResponse(status_code=503, content={"status": "unavailable", "error": type(exc).__name__})
+    return {"status": "ok"}

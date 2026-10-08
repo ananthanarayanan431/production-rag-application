@@ -6,7 +6,7 @@ from config.setting import get_settings
 
 settings = get_settings()
 
-_PUBLIC_PATHS = ("/health", "/docs", "/openapi.json")
+_PUBLIC_PATHS = ("/health", "/health/pageindex", "/docs", "/openapi.json")
 
 
 def _unauthorized() -> JSONResponse:

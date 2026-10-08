@@ -39,6 +39,7 @@ class CustomerSupportBotSettings(BaseSettings):
     POSTGRES_DSN: SecretStr
 
     # LLM provider: every model call goes through OpenRouter's OpenAI-compatible API
+    PAGEINDEX_API_KEY: SecretStr
     OPENROUTER_API_KEY: SecretStr
     OPENROUTER_BASE_URL: ServiceUrl = "https://openrouter.ai/api/v1"
     LLM_TIMEOUT_SECONDS: float = Field(default=60.0, gt=0, description="Per-request timeout for every LLM call")
