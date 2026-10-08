@@ -167,7 +167,6 @@ production-rag/
 │   └── logging.py                 # structlog setup
 ├── evals/                         # Offline, live, and trace evals + golden dataset
 ├── tests/                         # Unit tests (uv run pytest)
-├── terraform/                     # AWS ECS/RDS/ALB infrastructure
 ├── .github/workflows/             # CI, eval gate, deploy, nightly evals
 ├── Dockerfile
 ├── docker-compose.yml

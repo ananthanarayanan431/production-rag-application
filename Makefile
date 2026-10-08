@@ -12,7 +12,7 @@ WEB_PORT    ?= 5173
         api web dev token index-docs \
         up down stop logs ps docker-up docker-down \
         test test-api test-web lint lint-api lint-web build-web \
-        evals evals-offline evals-traces baseline-update tf-plan tf-apply
+        evals evals-offline evals-traces baseline-update
 
 help: ## Show this help
 	@awk 'BEGIN {FS = ":.*## "} /^##@/ {printf "\n\033[1m%s\033[0m\n", substr($$0, 5)} /^[a-zA-Z_-]+:.*## / {printf "  \033[36m%-16s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -122,11 +122,3 @@ baseline-update: ## Refresh the eval baseline from the current results
 	uv run python -m evals.run_evals
 	cp evals/reports/latest.json evals/baselines/latest.json
 	@echo "Baseline updated. Commit evals/baselines/latest.json to lock it in."
-
-##@ Infrastructure
-
-tf-plan: ## terraform plan
-	cd terraform && terraform plan
-
-tf-apply: ## terraform apply
-	cd terraform && terraform apply

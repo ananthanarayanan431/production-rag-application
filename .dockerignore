@@ -7,7 +7,6 @@
 .pytest_cache
 .mypy_cache
 evals/reports
-terraform
 tests
 services
 web
