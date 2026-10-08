@@ -190,8 +190,9 @@ Key variables:
 | `LOW_COMPLEXITY_MODEL` | `google/gemini-2.0-flash-001` | OpenRouter model slug for simple queries, query analysis, tree search and the completeness judge |
 | `HIGH_COMPLEXITY_MODEL` | `google/gemini-2.5-pro` | OpenRouter model slug for complex queries (e.g. `openai/gpt-4o`) |
 | `FAITHFULNESS_MODEL` | `openai/gpt-4o-mini` | OpenRouter model slug for the Ragas faithfulness judge |
-| `FAITHFULNESS_THRESHOLD` | `0.7` | Ragas score below this triggers a warning |
-| `COMPLETENESS_THRESHOLD` | `0.7` | Completeness score below this triggers a warning |
+| `FAITHFULNESS_THRESHOLD` | `0.7` | Ragas score below this triggers escalation, then a warning |
+| `COMPLETENESS_THRESHOLD` | `0.7` | Completeness score below this triggers escalation, then a warning |
+| `MAX_VALIDATION_RETRIES` | `1` | Failed validation loops back to `query_intelligence` this many times (forced onto the high-complexity model) before the answer is returned unvalidated |
 | `MAX_INPUT_CHARS` | `10000` | Queries longer than this are rejected with 400 |
 | `MAX_SESSION_TURNS` | `10` | How many conversation turns to keep in context |
 

@@ -108,7 +108,34 @@ async def validation_merge_node(state: SupportBotState) -> dict:
             completeness=round(completeness, 3),
         )
 
-    return {
+    update = {
         "validation_passed": passed,
         "final_response": state["raw_response"],
     }
+
+    retry_count = state.get("retry_count", 0)
+    if not passed and retry_count < settings.MAX_VALIDATION_RETRIES:
+        # Escalate: route_after_validation sends the request back to query_intelligence.
+        update["retry_count"] = retry_count + 1
+        update["validation_feedback"] = _build_feedback(faithfulness, completeness)
+        log.warning("validation_escalated", attempt=retry_count + 1)
+    return update
+
+
+def _build_feedback(faithfulness: float, completeness: float) -> str:
+    issues = []
+    if faithfulness < settings.FAITHFULNESS_THRESHOLD:
+        issues.append(
+            f"The previous answer contained claims not supported by the support documentation (faithfulness {faithfulness:.2f})."
+        )
+    if completeness < settings.COMPLETENESS_THRESHOLD:
+        issues.append(
+            f"The previous answer did not address every part of the user's question (completeness {completeness:.2f}). "
+            "Make sure sub_queries cover each distinct question."
+        )
+    return " ".join(issues)
+
+
+def route_after_validation(state: SupportBotState) -> str:
+    # validation_feedback is only set when validation_merge decided to escalate.
+    return "query_intelligence" if state.get("validation_feedback") else "cache_store"

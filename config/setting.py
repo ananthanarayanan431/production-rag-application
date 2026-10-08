@@ -55,6 +55,10 @@ class CustomerSupportBotSettings(BaseSettings):
     FAITHFULNESS_THRESHOLD: float = Field(default=0.7, ge=0.0, le=1.0)
     COMPLETENESS_THRESHOLD: float = Field(default=0.7, ge=0.0, le=1.0)
 
+    # Escalation: how many times a failed validation loops back to query_intelligence
+    # (re-analysed with the failure as feedback, forced onto the high-complexity model)
+    MAX_VALIDATION_RETRIES: int = Field(default=1, ge=0, le=3)
+
     # Session memory
     MAX_SESSION_TURNS: int = Field(default=10, gt=0)
 

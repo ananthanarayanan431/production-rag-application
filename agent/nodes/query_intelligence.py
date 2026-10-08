@@ -46,7 +46,18 @@ async def query_intelligence_node(state: SupportBotState) -> dict:
         session_history=history_text,
     )
 
+    feedback = state.get("validation_feedback")
+    if feedback:
+        prompt += (
+            "\n\nThis is a retry: the answer generated from your previous analysis failed validation.\n"
+            f"{feedback}\nRe-analyse the query accordingly."
+        )
+
     result: QueryAnalysis = await _analyse(prompt)
+
+    # Escalated requests always go to the high-complexity model.
+    if state.get("retry_count", 0) > 0:
+        result.complexity = "high"
 
     log.info(
         "query_intelligence_complete",
@@ -55,6 +66,7 @@ async def query_intelligence_node(state: SupportBotState) -> dict:
         complexity=result.complexity,
         needs_decomp=result.needs_decomp,
         prompt_version=PROMPT_VERSION,
+        retry_count=state.get("retry_count", 0),
     )
 
     return {
@@ -63,4 +75,7 @@ async def query_intelligence_node(state: SupportBotState) -> dict:
         "complexity": result.complexity,
         "needs_decomp": result.needs_decomp,
         "prompt_version": PROMPT_VERSION,
+        # Consume the feedback, and clear answers from the failed attempt (empty list resets the reducer).
+        "validation_feedback": "",
+        "sub_responses": [],
     }

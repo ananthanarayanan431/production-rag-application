@@ -150,6 +150,9 @@ async def query_endpoint(body: QueryRequest, request: Request):
         "completeness_score": 0.0,
         "validation_passed": False,
         "final_response": "",
+        # per-request counters: the thread is checkpointed per session, so reset them every turn
+        "retry_count": 0,
+        "validation_feedback": "",
     }
 
     config = {"configurable": {"thread_id": session_id}}

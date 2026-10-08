@@ -37,3 +37,5 @@ class SupportBotState(TypedDict):
     completeness_score: float
     validation_passed: bool
     final_response: str
+    retry_count: int
+    validation_feedback: str

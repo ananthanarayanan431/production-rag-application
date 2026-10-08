@@ -14,6 +14,7 @@ from agent.nodes.execution import (
 from agent.nodes.output_validation import (
     completeness_node,
     faithfulness_node,
+    route_after_validation,
     validation_merge_node,
 )
 from agent.nodes.query_intelligence import query_intelligence_node
@@ -101,7 +102,12 @@ async def build_graph(pool: AsyncConnectionPool):
     g.add_edge("faithfulness", "validation_merge")
     g.add_edge("completeness", "validation_merge")
 
-    g.add_edge("validation_merge", "cache_store")
+    # Failed validation escalates back to query_intelligence (bounded by MAX_VALIDATION_RETRIES)
+    g.add_conditional_edges(
+        "validation_merge",
+        route_after_validation,
+        {"query_intelligence": "query_intelligence", "cache_store": "cache_store"},
+    )
     g.add_edge("cache_store", END)
 
     return g.compile(checkpointer=checkpointer)
