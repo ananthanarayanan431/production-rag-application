@@ -141,7 +141,6 @@ async def query_endpoint(body: QueryRequest, request: Request):
         "needs_decomp": False,
         "prompt_version": "",
         "current_subquery": "",
-        "session_history": [],
         "retrieved_context": [],
         "sub_responses": [],
         "raw_response": "",

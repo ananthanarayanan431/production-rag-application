@@ -58,3 +58,22 @@ async def test_sub_responses_do_not_leak_across_turns_in_same_session():
 
     assert sorted(first["raw_response"].split("|")) == ["a", "b"]
     assert sorted(second["raw_response"].split("|")) == ["c", "d"]
+
+
+def test_append_history_appends_and_caps_length():
+    from agent.state import append_history
+    from config.setting import get_settings
+
+    cap = get_settings().MAX_SESSION_TURNS * 2
+    msgs = [{"role": "user", "content": str(i)} for i in range(cap + 4)]
+    result = append_history(msgs[:cap], msgs[cap:])
+    assert len(result) == cap
+    assert result[-1] == msgs[-1]
+    assert result[0] == msgs[4]
+
+
+def test_append_history_handles_none():
+    from agent.state import append_history
+
+    assert append_history(None, [{"role": "user", "content": "a"}]) == [{"role": "user", "content": "a"}]
+    assert append_history([{"role": "user", "content": "a"}], None) == [{"role": "user", "content": "a"}]

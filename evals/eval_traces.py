@@ -27,28 +27,28 @@ DATASET_PATH = Path(eval_settings.DATASET_FILE)
 # Expected graph paths through the AGENT nodes (post-safety-gate)
 EXPECTED_AGENT_PATHS = {
     "simple_query": [
-        "query_intelligence", "session_memory", "context_retrieval",
+        "query_intelligence", "context_retrieval",
         "generate_flash",
         "faithfulness", "completeness", "validation_merge",
-        "cache_store",
+        "session_save", "cache_store",
     ],
     "complex_query": [
-        "query_intelligence", "session_memory", "context_retrieval",
+        "query_intelligence", "context_retrieval",
         "generate_pro",
         "faithfulness", "completeness", "validation_merge",
-        "cache_store",
+        "session_save", "cache_store",
     ],
     "decomposed_query": [
-        "query_intelligence", "session_memory", "context_retrieval",
+        "query_intelligence", "context_retrieval",
         "generate_subquery", "merge_subqueries",
         "faithfulness", "completeness", "validation_merge",
-        "cache_store",
+        "session_save", "cache_store",
     ],
 }
 
 NODE_LATENCY_BUDGETS_MS = {
     "query_intelligence": 5000,
-    "session_memory": 500,
+    "session_save": 500,
     "context_retrieval": 8000,
     "generate_flash": 5000,
     "generate_pro": 15000,

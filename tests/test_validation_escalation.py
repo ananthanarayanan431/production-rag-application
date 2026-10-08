@@ -34,12 +34,12 @@ async def test_stops_escalating_after_max_retries():
     update = await validation_merge_node(state)
     assert update["validation_passed"] is False
     assert "validation_feedback" not in update
-    assert route_after_validation({**state, **update}) == "cache_store"
+    assert route_after_validation({**state, **update}) == "session_save"
 
 
 @pytest.mark.asyncio
-async def test_pass_goes_to_cache_store():
+async def test_pass_goes_to_session_save():
     state = {**_BASE, "faithfulness_score": 0.9, "completeness_score": 0.9, "retry_count": 0}
     update = await validation_merge_node(state)
     assert update["validation_passed"] is True
-    assert route_after_validation({**state, **update}) == "cache_store"
+    assert route_after_validation({**state, **update}) == "session_save"

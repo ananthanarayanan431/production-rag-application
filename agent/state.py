@@ -1,5 +1,7 @@
 from typing import Annotated, Literal, TypedDict
 
+from config.setting import get_settings
+
 
 def append_list(existing: list, new: list) -> list:
     """
@@ -12,6 +14,16 @@ def append_list(existing: list, new: list) -> list:
     if new == []:
         return []
     return (existing or []) + (new or [])
+
+
+def append_history(existing: list[dict], new: list[dict]) -> list[dict]:
+    """
+    Reducer for session_history: appends new messages, keeping only the most
+    recent MAX_SESSION_TURNS exchanges (2 messages each) so the checkpointed
+    history stays bounded.
+    """
+    combined = (existing or []) + (new or [])
+    return combined[-(get_settings().MAX_SESSION_TURNS * 2):]
 
 
 class SupportBotState(TypedDict):
@@ -28,7 +40,7 @@ class SupportBotState(TypedDict):
     needs_decomp: bool
     prompt_version: str
     current_subquery: str
-    session_history: list[dict]
+    session_history: Annotated[list[dict], append_history]
     retrieved_context: list[str]
     sub_responses: Annotated[list[str], append_list]
     raw_response: str

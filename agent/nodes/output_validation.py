@@ -138,4 +138,4 @@ def _build_feedback(faithfulness: float, completeness: float) -> str:
 
 def route_after_validation(state: SupportBotState) -> str:
     # validation_feedback is only set when validation_merge decided to escalate.
-    return "query_intelligence" if state.get("validation_feedback") else "cache_store"
+    return "query_intelligence" if state.get("validation_feedback") else "session_save"

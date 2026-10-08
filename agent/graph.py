@@ -23,7 +23,7 @@ from agent.nodes.safety_gate import (
     pii_scrub_node,
     safety_merge_node,
 )
-from agent.nodes.session_memory import session_memory_node
+from agent.nodes.session_memory import session_save_node
 from agent.state import SupportBotState
 
 
@@ -51,7 +51,6 @@ async def build_graph(pool: AsyncConnectionPool):
     g.add_node("attack_detect", attack_detect_node)
     g.add_node("safety_merge", safety_merge_node)
     g.add_node("query_intelligence", query_intelligence_node)
-    g.add_node("session_memory", session_memory_node)
     g.add_node("context_retrieval", context_retrieval_node)
     g.add_node("generate_flash", generate_flash_node)
     g.add_node("generate_pro", generate_pro_node)
@@ -60,6 +59,7 @@ async def build_graph(pool: AsyncConnectionPool):
     g.add_node("faithfulness", faithfulness_node)
     g.add_node("completeness", completeness_node)
     g.add_node("validation_merge", validation_merge_node)
+    g.add_node("session_save", session_save_node)
     g.add_node("cache_store", cache_store_node)
 
     # ── Edges ─────────────────────────────────────────────────────────────────
@@ -74,8 +74,7 @@ async def build_graph(pool: AsyncConnectionPool):
     # After merge: reject attacks, otherwise continue
     g.add_conditional_edges("safety_merge", _route_after_safety)
 
-    g.add_edge("query_intelligence", "session_memory")
-    g.add_edge("session_memory", "context_retrieval")
+    g.add_edge("query_intelligence", "context_retrieval")
 
     # Execution branch: Flash / Pro / Send fan-out
     g.add_conditional_edges(
@@ -102,12 +101,14 @@ async def build_graph(pool: AsyncConnectionPool):
     g.add_edge("faithfulness", "validation_merge")
     g.add_edge("completeness", "validation_merge")
 
-    # Failed validation escalates back to query_intelligence (bounded by MAX_VALIDATION_RETRIES)
+    # Failed validation escalates back to query_intelligence (bounded by MAX_VALIDATION_RETRIES);
+    # otherwise record the exchange before cache_store, which logs the request summary and ends the run
     g.add_conditional_edges(
         "validation_merge",
         route_after_validation,
-        {"query_intelligence": "query_intelligence", "cache_store": "cache_store"},
+        {"query_intelligence": "query_intelligence", "session_save": "session_save"},
     )
+    g.add_edge("session_save", "cache_store")
     g.add_edge("cache_store", END)
 
     return g.compile(checkpointer=checkpointer)

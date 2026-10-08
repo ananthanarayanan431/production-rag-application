@@ -19,10 +19,10 @@ POST /query
   └─ LangGraph graph (LangSmith traces everything)
        ├─ safety_gate       Presidio PII scrub + Rival attack detection (parallel)
        ├─ query_intelligence  1 structured LLM call → intent, sub_queries, complexity
-       ├─ session_memory    LangGraph PostgresSaver checkpointer
        ├─ context_retrieval PageIndex tree search + MongoDB
        ├─ execution         Low / high complexity model via OpenRouter / parallel sub-queries (Send API)
        ├─ output_validation Ragas faithfulness + custom completeness metric
+       ├─ session_save      Append the exchange to per-session history (PostgresSaver checkpointer)
        └─ cache_store       GPTCache write + structlog summary
 ```
 
@@ -137,7 +137,7 @@ production-rag/
 │   └── nodes/
 │       ├── safety_gate.py         # Presidio + Rival (parallel graph nodes)
 │       ├── query_intelligence.py  # Structured LLM call
-│       ├── session_memory.py      # History trimming
+│       ├── session_memory.py      # Records each exchange in session history
 │       ├── context_retrieval.py   # PageIndex + MongoDB
 │       ├── execution.py           # Model selection + Send fan-out
 │       ├── output_validation.py   # Ragas + completeness
