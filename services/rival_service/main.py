@@ -7,12 +7,17 @@ startup via lifespan, then serves fast inference requests.
 Deploy this separately from the main app — it needs its own memory budget
 (~1.5–2GB for the model) and should be independently scalable.
 """
+import logging
 from contextlib import asynccontextmanager
 
 import uvicorn
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from rival_ai.detectors import BhairavaAttackDetector
+
+# The image ships only this file, so it can't import the main app's observability package.
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
+log = logging.getLogger("rival_service")
 
 _detector: BhairavaAttackDetector | None = None
 
@@ -21,7 +26,7 @@ _detector: BhairavaAttackDetector | None = None
 async def lifespan(app: FastAPI):
     global _detector
     _detector = BhairavaAttackDetector.from_pretrained()
-    print("Bhairava-0.4B loaded and ready")
+    log.info("Bhairava-0.4B loaded and ready")
     yield
     _detector = None
 

@@ -20,6 +20,9 @@ import httpx
 from jose import jwt
 
 from evals.config import eval_settings
+from observability.logging import configure_logging, get_logger
+
+log = get_logger()
 
 DATASET_PATH = Path(eval_settings.DATASET_FILE)
 BASELINE_PATH = Path(eval_settings.BASELINE_FILE)
@@ -133,7 +136,7 @@ async def run_all_evals() -> dict:
             result = await run_single_eval(client, case)
             results.append(result)
             status = "PASS" if result.get("passed") else "FAIL"
-            print(f"  [{status}] {result['id']} ({result.get('latency_ms', 0):.0f}ms)")
+            log.info("eval_case", status=status, case=result["id"], latency_ms=round(result.get("latency_ms", 0)))
 
     total = len(results)
     passed = sum(1 for r in results if r.get("passed"))
@@ -227,42 +230,46 @@ def compare_with_baseline(report: dict) -> dict:
 
 
 async def main():
-    print("Running eval suite...")
-    print("=" * 60)
+    configure_logging()
+    log.info("eval_suite_started")
 
     report = await run_all_evals()
 
-    print("=" * 60)
-    print(f"\nResults: {report['summary']['passed']}/{report['summary']['total']} passed")
-    print(f"Avg latency: {report['summary']['avg_latency_ms']:.0f}ms")
-    print(f"P95 latency: {report['summary']['p95_latency_ms']:.0f}ms")
-    print(f"Estimated cost: ${report['summary']['total_estimated_cost_usd']:.4f}")
+    summary = report["summary"]
+    log.info(
+        "eval_suite_results",
+        passed=summary["passed"],
+        total=summary["total"],
+        avg_latency_ms=round(summary["avg_latency_ms"]),
+        p95_latency_ms=round(summary["p95_latency_ms"]),
+        estimated_cost_usd=round(summary["total_estimated_cost_usd"], 4),
+    )
 
     # Compare with baseline
     comparison = compare_with_baseline(report)
     report["baseline_comparison"] = comparison
 
     if comparison.get("has_regressions"):
-        print("\n!! REGRESSIONS DETECTED:")
+        log.warning("regressions_detected")
         for reg in comparison["regressions"]:
             detail = reg.get("detail") or f"{reg.get('change_pct', 0)}% change"
-            print(f"  - {reg['metric']}: {detail}")
+            log.warning("regression", metric=reg["metric"], detail=detail)
 
     # Write report
     report_path = Path("evals/reports/latest.json")
     report_path.parent.mkdir(parents=True, exist_ok=True)
     report_path.write_text(json.dumps(report, indent=2))
-    print(f"\nReport written to {report_path}")
+    log.info("report_written", path=str(report_path))
 
     # Exit code: fail if regressions or low pass rate
     if comparison.get("has_regressions"):
-        print("\nFAILED: Regressions detected against baseline")
+        log.error("eval_failed", reason="regressions detected against baseline")
         sys.exit(1)
     elif report["summary"]["pass_rate"] < 0.8:
-        print(f"\nFAILED: Pass rate {report['summary']['pass_rate']:.0%} below 80% threshold")
+        log.error("eval_failed", reason="pass rate below 80% threshold", pass_rate=report["summary"]["pass_rate"])
         sys.exit(1)
     else:
-        print("\nPASSED")
+        log.info("eval_passed")
         sys.exit(0)
 
 

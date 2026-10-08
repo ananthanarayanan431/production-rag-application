@@ -19,5 +19,8 @@ def configure_logging():
     )
 
 
-def get_logger(request_id: str, **kwargs):
+def get_logger(request_id: str | None = None, **kwargs):
+    """Per-request logger when request_id is given; otherwise a plain (lazy) logger for scripts and startup."""
+    if request_id is None:
+        return structlog.get_logger().bind(**kwargs) if kwargs else structlog.get_logger()
     return structlog.get_logger().bind(request_id=request_id, **kwargs)

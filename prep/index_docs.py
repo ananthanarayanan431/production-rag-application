@@ -17,10 +17,13 @@ import time
 from pathlib import Path
 
 import motor.motor_asyncio
-import pageindex.utils as utils
 from pageindex import PageIndexClient
 from pydantic import SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+from observability.logging import configure_logging, get_logger
+
+log = get_logger()
 
 # Must match the doc_id that agent/nodes/context_retrieval.py looks up.
 DEFAULT_DOC_ID = "apple-support"
@@ -45,9 +48,13 @@ def _count_nodes_with_text(tree: list) -> int:
     return count
 
 
+def _outline(tree: list) -> list:
+    return [{"title": n.get("title"), "nodes": _outline(n.get("nodes", []))} for n in tree]
+
+
 def submit_and_wait(pi_client: PageIndexClient, pdf_path: Path, timeout_seconds: int) -> list:
     pi_doc_id = pi_client.submit_document(str(pdf_path))["doc_id"]
-    print(f"Submitted to PageIndex: {pi_doc_id}")
+    log.info("submitted_to_pageindex", pi_doc_id=pi_doc_id)
 
     deadline = time.monotonic() + timeout_seconds
     while time.monotonic() < deadline:
@@ -60,10 +67,10 @@ def submit_and_wait(pi_client: PageIndexClient, pdf_path: Path, timeout_seconds:
         result = pi_client.get_tree(pi_doc_id, node_summary=True)
         if result.get("retrieval_ready"):
             tree = result["result"]
-            print(f"Tree ready: {len(tree)} top-level nodes")
+            log.info("tree_ready", top_level_nodes=len(tree))
             return tree
 
-        print(f"  Waiting for PageIndex to process... (status={status})")
+        log.info("waiting_for_pageindex", status=status)
         time.sleep(POLL_INTERVAL_SECONDS)
 
     raise TimeoutError(f"PageIndex did not finish processing {pi_doc_id} within {timeout_seconds}s")
@@ -79,7 +86,7 @@ async def store_tree(mongodb_uri: str, doc_id: str, tree: list) -> None:
         )
     finally:
         client.close()
-    print(f"Stored tree for '{doc_id}' in MongoDB.")
+    log.info("tree_stored", doc_id=doc_id)
 
 
 def main() -> None:
@@ -88,26 +95,28 @@ def main() -> None:
     parser.add_argument("--doc-id", default=DEFAULT_DOC_ID, help=f"Identifier for this document (default: {DEFAULT_DOC_ID})")
     parser.add_argument("--timeout", type=int, default=600, help="Seconds to wait for PageIndex processing (default: 600)")
     args = parser.parse_args()
+    configure_logging()
 
     if not args.pdf.is_file():
-        sys.exit(f"PDF not found: {args.pdf}")
+        log.error("pdf_not_found", pdf=str(args.pdf))
+        sys.exit(1)
 
     settings = PrepSettings()
 
-    print(f"Indexing '{args.pdf}' as doc_id='{args.doc_id}'")
+    log.info("indexing_started", pdf=str(args.pdf), doc_id=args.doc_id)
     pi_client = PageIndexClient(api_key=settings.PAGEINDEX_API_KEY.get_secret_value())
     tree = submit_and_wait(pi_client, args.pdf, args.timeout)
 
     # context_retrieval returns node["text"] as context; a tree without it would
     # make every query retrieve nothing, so refuse to store it.
     if _count_nodes_with_text(tree) == 0:
-        sys.exit("PageIndex tree has no node text; refusing to store a tree that retrieval can't use.")
+        log.error("tree_has_no_node_text", detail="refusing to store a tree that retrieval can't use")
+        sys.exit(1)
 
-    print("\nTree structure:")
-    utils.print_tree(tree)
+    log.info("tree_structure", outline=_outline(tree))
 
     asyncio.run(store_tree(settings.MONGODB_URI.get_secret_value(), args.doc_id, tree))
-    print("\nDone. Document is ready for retrieval.")
+    log.info("indexing_complete", doc_id=args.doc_id)
 
 
 if __name__ == "__main__":

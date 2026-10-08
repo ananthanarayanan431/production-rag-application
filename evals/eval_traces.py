@@ -18,6 +18,9 @@ import httpx
 from jose import jwt
 
 from evals.config import eval_settings
+from observability.logging import configure_logging, get_logger
+
+log = get_logger()
 
 DATASET_PATH = Path(eval_settings.DATASET_FILE)
 
@@ -139,7 +142,7 @@ async def run_and_check_traces():
 
             status = "PASS" if result["passed"] else "FAIL"
             detail = f"model={'OK' if model_correct else 'WRONG'}, validation={'OK' if validation_ran else 'MISSING'}"
-            print(f"  [{status}] trace/{case['id']}: {expected_path_type} ({detail})")
+            log.info("eval_case", status=status, case=f"trace/{case['id']}", path_type=expected_path_type, detail=detail)
 
     total = len(results)
     passed = sum(1 for r in results if r["passed"])
@@ -156,13 +159,13 @@ async def run_and_check_traces():
     report_path.parent.mkdir(parents=True, exist_ok=True)
     report_path.write_text(json.dumps(report, indent=2))
 
-    print(f"\nTrace eval: {passed}/{total} passed")
+    log.info("trace_eval_complete", passed=passed, total=total)
     return report
 
 
 async def main():
-    print("Running trace-based evals (agent path verification)...")
-    print("=" * 60)
+    configure_logging()
+    log.info("trace_evals_started", note="agent path verification")
     report = await run_and_check_traces()
 
     if report["failed"] > 0:

@@ -17,6 +17,9 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from evals.config import eval_settings
+from observability.logging import configure_logging, get_logger
+
+log = get_logger()
 
 DATASET_PATH = Path(eval_settings.DATASET_FILE)
 
@@ -66,7 +69,7 @@ async def eval_query_intelligence_routing():
         })
 
         status = "PASS" if passed else "FAIL"
-        print(f"  [{status}] routing/{case['id']}: {actual_route} (expected {expected_route})")
+        log.info("eval_case", status=status, case=f"routing/{case['id']}", actual_route=actual_route, expected_route=expected_route)
 
     return results
 
@@ -97,7 +100,7 @@ async def eval_decomposition_expectations():
         })
 
         status = "PASS" if passed else "FAIL"
-        print(f"  [{status}] decomp/{case['id']}: {detail}")
+        log.info("eval_case", status=status, case=f"decomp/{case['id']}", detail=detail)
 
     return results
 
@@ -128,7 +131,7 @@ async def eval_prompt_versioning():
         })
 
         status = "PASS" if passed else "FAIL"
-        print(f"  [{status}] prompt/{prompt_path}")
+        log.info("eval_case", status=status, case=f"prompt/{prompt_path}")
 
     return results
 
@@ -162,7 +165,7 @@ async def eval_token_budget():
         })
 
         status = "PASS" if passed else "FAIL"
-        print(f"  [{status}] token_budget/{case['id']}: ~{int(total_estimated)} tokens")
+        log.info("eval_case", status=status, case=f"token_budget/{case['id']}", estimated_tokens=int(total_estimated))
 
     return results
 
@@ -192,36 +195,35 @@ async def eval_model_assignment():
         })
 
         status = "PASS" if passed else "FAIL"
-        print(f"  [{status}] model_assignment/{case['id']}: {complexity} -> {model}")
+        log.info("eval_case", status=status, case=f"model_assignment/{case['id']}", complexity=complexity, model=model)
 
     return results
 
 
 async def main():
-    print("Running offline evals (no server needed)...")
-    print("=" * 60)
+    configure_logging()
+    log.info("offline_evals_started", note="no server needed")
 
     all_results = []
 
-    print("\n1. Query Intelligence Routing:")
+    log.info("eval_section", name="Query Intelligence Routing")
     all_results.extend(await eval_query_intelligence_routing())
 
-    print("\n2. Decomposition Expectations:")
+    log.info("eval_section", name="Decomposition Expectations")
     all_results.extend(await eval_decomposition_expectations())
 
-    print("\n3. Prompt Versioning:")
+    log.info("eval_section", name="Prompt Versioning")
     all_results.extend(await eval_prompt_versioning())
 
-    print("\n4. Token Budget Estimates:")
+    log.info("eval_section", name="Token Budget Estimates")
     all_results.extend(await eval_token_budget())
 
-    print("\n5. Model Assignment Consistency:")
+    log.info("eval_section", name="Model Assignment Consistency")
     all_results.extend(await eval_model_assignment())
 
-    print("\n" + "=" * 60)
     total = len(all_results)
     passed = sum(1 for r in all_results if r["passed"])
-    print(f"Results: {passed}/{total} passed")
+    log.info("offline_evals_complete", passed=passed, total=total)
 
     report = {
         "type": "offline",
