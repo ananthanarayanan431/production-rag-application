@@ -18,13 +18,30 @@ POST /query
   │
   └─ LangGraph graph (LangSmith traces everything)
        ├─ safety_gate       Presidio PII scrub + Rival attack detection (parallel)
+       │                    └─ attack → 403, graph ends
        ├─ query_intelligence  1 structured LLM call → intent, sub_queries, complexity
        ├─ context_retrieval PageIndex tree search + MongoDB
        ├─ execution         Low / high complexity model via OpenRouter / parallel sub-queries (Send API)
-       ├─ output_validation Ragas faithfulness + custom completeness metric
+       ├─ output_validation Ragas faithfulness + custom completeness metric (parallel)
+       │                    └─ fail → back to query_intelligence (up to MAX_VALIDATION_RETRIES)
        ├─ session_save      Append the exchange to per-session history (PostgresSaver checkpointer)
-       └─ cache_store       GPTCache write + structlog summary
+       └─ cache_store       GPTCache write (validated answers only) + structlog summary
 ```
+
+### Validation escalation
+
+If faithfulness or completeness falls below its threshold, the request is not returned straight away. `validation_merge` routes it back to `query_intelligence` with feedback describing what failed (unsupported claims, or sub-questions left unanswered). The retry is forced onto the high-complexity model and re-runs retrieval and generation. This repeats up to `MAX_VALIDATION_RETRIES` times; after that the answer is returned with `validation_passed: false` and is never cached.
+
+### Session memory
+
+`session_history` is stored per `session_id` by the PostgresSaver checkpointer. After a request is final (including any escalation), `session_save` appends the PII-scrubbed query and the answer, keeping the last `MAX_SESSION_TURNS` exchanges. Query analysis and generation read the most recent turns as conversation context. Answers served from the semantic cache skip the graph, so they are not recorded.
+
+### Health endpoints
+
+| Route | Auth | Purpose |
+|---|---|---|
+| `GET /health` | public | API is up, graph compiled |
+| `GET /health/pageindex` | public | Makes a small authenticated PageIndex call (5 s timeout); 200 if reachable and the key works, 503 otherwise |
 
 ## Stack
 
@@ -38,14 +55,14 @@ POST /query
 | Attack detection | rival-ai (Bhairava-0.4B, separate microservice) |
 | Semantic caching | GPTCache (server mode) |
 | RAG retrieval | PageIndex + MongoDB (motor) |
-| Session memory | LangGraph PostgresSaver + asyncpg |
+| Session memory | LangGraph PostgresSaver + psycopg pool |
 | LLM provider | OpenRouter (OpenAI-compatible API via langchain-openai) |
 | LLM (low complexity) | `google/gemini-2.0-flash-001` (configurable) |
 | LLM (high complexity) | `google/gemini-2.5-pro` (configurable) |
 | Hallucination detection | Ragas Faithfulness |
 | Completeness check | Custom LLM-as-judge metric |
 | Observability (LLM) | LangSmith |
-| Observability (app) | structlog |
+| Observability (app) | structlog (JSON logs, request-id correlated) |
 | Retries | tenacity |
 | Circuit breaking | pybreaker |
 | HTTP client | httpx |
@@ -137,7 +154,7 @@ production-rag/
 │   └── nodes/
 │       ├── safety_gate.py         # Presidio + Rival (parallel graph nodes)
 │       ├── query_intelligence.py  # Structured LLM call
-│       ├── session_memory.py      # Records each exchange in session history
+│       ├── session_memory.py      # session_save: records each exchange in session history
 │       ├── context_retrieval.py   # PageIndex + MongoDB
 │       ├── execution.py           # Model selection + Send fan-out
 │       ├── output_validation.py   # Ragas + completeness
@@ -164,9 +181,10 @@ production-rag/
 │   ├── rate_limit.py              # slowapi limiter
 │   └── input_guard.py             # Length + encoding check
 ├── observability/
-│   └── logging.py                 # structlog setup
+│   ├── logging.py                 # structlog setup, get_logger()
+│   └── health.py                  # PageIndex reachability check
 ├── evals/                         # Offline, live, and trace evals + golden dataset
-├── tests/                         # Unit tests (uv run pytest)
+├── tests/                         # Unit tests (make test-api)
 ├── .github/workflows/             # CI, eval gate, deploy, nightly evals
 ├── Dockerfile
 ├── docker-compose.yml
@@ -194,7 +212,7 @@ Key variables:
 | `COMPLETENESS_THRESHOLD` | `0.7` | Completeness score below this triggers escalation, then a warning |
 | `MAX_VALIDATION_RETRIES` | `1` | Failed validation loops back to `query_intelligence` this many times (forced onto the high-complexity model) before the answer is returned unvalidated |
 | `MAX_INPUT_CHARS` | `10000` | Queries longer than this are rejected with 400 |
-| `MAX_SESSION_TURNS` | `10` | How many conversation turns to keep in context |
+| `MAX_SESSION_TURNS` | `10` | Conversation turns (user + assistant) kept in session history |
 
 ## Prompt versioning
 
@@ -207,13 +225,21 @@ To make a new prompt version: copy `prompts/v1/` to `prompts/v2/`, edit, and upd
 | Dependency | Breaker opens after | Fallback behaviour |
 |---|---|---|
 | Rival (attack detection) | 5 failures | Allow request through, log warning |
-| PageIndex / MongoDB | 5 failures | Empty context, LLM answers from knowledge |
-| GPTCache | 5 failures | Skip cache, continue normally |
+| Retrieval (MongoDB + tree-search LLM) | 5 failures | Empty context, LLM answers from knowledge |
+| GPTCache (writes) | 5 failures | Skip the write, user still gets the response |
+| GPTCache (lookups) | — (2 s timeout) | Treated as a miss, graph runs normally |
 | LLM provider | — (tenacity retries x3) | 503 to user |
+
+## Evals
+
+`make evals-offline` runs routing, decomposition, prompt-integrity and token-budget checks with no services. `make evals` runs the golden dataset against a running API and compares the results with `evals/baselines/latest.json`; `make evals-traces` verifies the agent's node paths. A PR fails the eval gate on regressions or a pass rate below 80%. `make baseline-update` refreshes the baseline.
+
+## Logging
+
+All application and script output goes through structlog as JSON lines, each request carrying its `request_id`. The Rival service uses stdlib logging because its image ships only `main.py`. `scripts/make_token.py` is the one deliberate `print`, since its output is the token.
 
 ## What's next
 
-- **Eval regression suite** — LangSmith datasets + evaluations to catch regressions when prompts or models change
 - **Streaming output** — FastAPI `StreamingResponse` with LangChain async streaming
 - **A/B model testing** — route N% of traffic to a new model, compare scores before cutting over
 - **Long-term cross-session memory** — user preference store (device model, past issues, communication style)
